@@ -13,10 +13,11 @@ namespace Pathfinding.Serialization {
 	public class JsonOptInAttribute : System.Attribute {
 	}
 
-	/** A very tiny json serializer.
-	 * It is not supposed to have lots of features, it is only intended to be able to serialize graph settings
-	 * well enough.
-	 */
+	/// <summary>
+	/// A very tiny json serializer.
+	/// It is not supposed to have lots of features, it is only intended to be able to serialize graph settings
+	/// well enough.
+	/// </summary>
 	public class TinyJsonSerializer {
 		System.Text.StringBuilder output = new System.Text.StringBuilder();
 
@@ -160,27 +161,32 @@ namespace Pathfinding.Serialization {
 		}
 	}
 
-	/** A very tiny json deserializer.
-	 * It is not supposed to have lots of features, it is only intended to be able to deserialize graph settings
-	 * well enough. Not much validation of the input is done.
-	 */
+	/// <summary>
+	/// A very tiny json deserializer.
+	/// It is not supposed to have lots of features, it is only intended to be able to deserialize graph settings
+	/// well enough. Not much validation of the input is done.
+	/// </summary>
 	public class TinyJsonDeserializer {
 		System.IO.TextReader reader;
+		GameObject contextRoot;
 
 		static readonly System.Globalization.NumberFormatInfo numberFormat = System.Globalization.NumberFormatInfo.InvariantInfo;
 
-		/** Deserializes an object of the specified type.
-		 * Will load all fields into the \a populate object if it is set (only works for classes).
-		 */
-		public static System.Object Deserialize (string text, Type type, System.Object populate = null) {
+		/// <summary>
+		/// Deserializes an object of the specified type.
+		/// Will load all fields into the populate object if it is set (only works for classes).
+		/// </summary>
+		public static System.Object Deserialize (string text, Type type, System.Object populate = null, GameObject contextRoot = null) {
 			return new TinyJsonDeserializer() {
-					   reader = new System.IO.StringReader(text)
+					   reader = new System.IO.StringReader(text),
+					   contextRoot = contextRoot,
 			}.Deserialize(type, populate);
 		}
 
-		/** Deserializes an object of type tp.
-		 * Will load all fields into the \a populate object if it is set (only works for classes).
-		 */
+		/// <summary>
+		/// Deserializes an object of type tp.
+		/// Will load all fields into the populate object if it is set (only works for classes).
+		/// </summary>
 		System.Object Deserialize (Type tp, System.Object populate = null) {
 			var tpInfo = WindowsStoreCompatibility.GetTypeInfo(tp);
 
@@ -322,7 +328,24 @@ namespace Pathfinding.Serialization {
 				if (EatField() != "GUID") throw new Exception("Expected 'GUID' field");
 				string guid = EatField();
 
-				foreach (var helper in UnityEngine.Object.FindObjectsOfType<UnityReferenceHelper>()) {
+				if (contextRoot != null) {
+					foreach (var helper in contextRoot.GetComponentsInChildren<UnityReferenceHelper>(true)) {
+						if (helper.GetGUID() == guid) {
+							if (Type.Equals(type, typeof(GameObject))) {
+								return helper.gameObject;
+							} else {
+								return helper.GetComponent(type);
+							}
+						}
+					}
+				}
+
+#if UNITY_2020_1_OR_NEWER
+				foreach (var helper in UnityEngine.Object.FindObjectsOfType<UnityReferenceHelper>(true))
+#else
+				foreach (var helper in UnityEngine.Object.FindObjectsOfType<UnityReferenceHelper>())
+#endif
+				{
 					if (helper.GetGUID() == guid) {
 						if (Type.Equals(type, typeof(GameObject))) {
 							return helper.gameObject;
@@ -333,12 +356,15 @@ namespace Pathfinding.Serialization {
 				}
 			}
 
-			// Try to load from resources
-			UnityEngine.Object[] objs = Resources.LoadAll(name, type);
+			// Note: calling LoadAll with an empty string will make it load the whole resources folder, which is probably a bad idea.
+			if (!string.IsNullOrEmpty(name)) {
+				// Try to load from resources
+				UnityEngine.Object[] objs = Resources.LoadAll(name, type);
 
-			for (int i = 0; i < objs.Length; i++) {
-				if (objs[i].name == name || objs.Length == 1) {
-					return objs[i];
+				for (int i = 0; i < objs.Length; i++) {
+					if (objs[i].name == name || objs.Length == 1) {
+						return objs[i];
+					}
 				}
 			}
 
