@@ -138,7 +138,7 @@ namespace RVO
             Agent agent = new Agent();
             agent.id_ = agents_.Count;
             agent.maxNeighbors_ = defaultAgent_.maxNeighbors_;
-            agent.maxSpeed_ = defaultAgent_.maxSpeed_;
+            agent.SetMaxSpeed(defaultAgent_.MaxSpeed);
             agent.neighborDist_ = defaultAgent_.neighborDist_;
             agent.position_ = position;
             agent.radius_ = defaultAgent_.radius_;
@@ -189,7 +189,7 @@ namespace RVO
             Agent agent = new Agent();
             agent.id_ = agents_.Count;
             agent.maxNeighbors_ = maxNeighbors;
-            agent.maxSpeed_ = maxSpeed;
+            agent.SetMaxSpeed(maxSpeed);
             agent.neighborDist_ = neighborDist;
             agent.position_ = position;
             agent.radius_ = radius;
@@ -356,7 +356,7 @@ namespace RVO
          */
         public float getAgentMaxSpeed(int agentNo)
         {
-            return agents_[agentNo].maxSpeed_;
+            return agents_[agentNo].MaxSpeed;
         }
 
         /**
@@ -693,7 +693,7 @@ namespace RVO
             }
 
             defaultAgent_.maxNeighbors_ = maxNeighbors;
-            defaultAgent_.maxSpeed_ = maxSpeed;
+            defaultAgent_.SetMaxSpeed(maxSpeed);
             defaultAgent_.neighborDist_ = neighborDist;
             defaultAgent_.radius_ = radius;
             defaultAgent_.timeHorizon_ = timeHorizon;
@@ -725,7 +725,7 @@ namespace RVO
          */
         public void setAgentMaxSpeed(int agentNo, float maxSpeed)
         {
-            agents_[agentNo].maxSpeed_ = maxSpeed;
+            agents_[agentNo].SetMaxSpeed(maxSpeed);
         }
 
         /**

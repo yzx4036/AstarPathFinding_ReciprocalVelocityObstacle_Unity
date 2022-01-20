@@ -4,13 +4,12 @@ using UnityEngine;
 using Pathfinding;
 using RVO;
 
-public class RVO_Agent : MonoBehaviour {
-
+public class RVO_Agent : MonoBehaviour
+{
     public Camera cam;
 
 
-    [SerializeField]
-    Vector3 target;
+    [SerializeField] Vector3 target;
     int currentNodeIndex = 0;
     int agentIndex = -1;
 
@@ -23,6 +22,20 @@ public class RVO_Agent : MonoBehaviour {
     Path path;
     CharacterController characterController;
 
+    public bool _isArrived = false;
+
+    public bool IsArrived
+    {
+        get { return _isArrived; }
+        set
+        {
+            if (agentIndex > 0)
+            {
+                Simulator.Instance.agents_[agentIndex].SetReady2Move(!value);
+            }
+        }
+    }
+
     // Use IEnumerator for initialization
 
     IEnumerator Start()
@@ -33,14 +46,16 @@ public class RVO_Agent : MonoBehaviour {
         characterController = GetComponent<CharacterController>();
 
         yield return StartCoroutine(StartPaths());
-            
+
         agentIndex = simulator.addAgentToSimulator(transform.position, gameObject, pathNodes);
     }
+
     IEnumerator StartPaths()
     {
         seeker = gameObject.GetComponent<Seeker>();
         target = transform.position + transform.forward * simulator.speed_target * 0.01f;
-        path = seeker.StartPath(transform.position, new Vector3(target.x, transform.position.y, target.z), OnPathComplete);
+        path = seeker.StartPath(transform.position, new Vector3(target.x, transform.position.y, target.z),
+            OnPathComplete);
         yield return StartCoroutine(path.WaitForPath());
     }
 
@@ -63,9 +78,10 @@ public class RVO_Agent : MonoBehaviour {
         }
     }
 
-	// Update is called once per frame
-	void FixedUpdate () 
+    // Update is called once per frame
+    void FixedUpdate()
     {
+        IsArrived = _isArrived;
         rallyIsReady = GameObject.FindGameObjectWithTag("Manager").GetComponent<UI_ButtonControl>().SpawnIsDone;
         //UseAStar = true;
 
@@ -74,6 +90,7 @@ public class RVO_Agent : MonoBehaviour {
             //Debug.Log("Is there new unit created? "+ GameObject.Find("AI").GetComponent<CreateAgent>().IsAdded.ToString());
             CheckPushAway();
         }
+
         if (rallyIsReady)
         {
             if (Input.GetMouseButtonDown(0))
@@ -91,14 +108,17 @@ public class RVO_Agent : MonoBehaviour {
                     //depending on the estimated length of path, decide if A* or potential field is used
 
                     // A* algorithm time complexity is O(b^d) ~ O((3)^PathLength)
-                    float pathLengthEstimated = (Vector3.Distance(transform.position, new Vector3(target.x, transform.position.y, target.z)) / AstarPath.active.data.gridGraph.nodeSize) ;
-                    long complexityEstimated = (int) Mathf.Pow(3, (int)pathLengthEstimated);
+                    float pathLengthEstimated =
+                        (Vector3.Distance(transform.position, new Vector3(target.x, transform.position.y, target.z)) /
+                         AstarPath.active.data.gridGraph.nodeSize);
+                    long complexityEstimated = (int) Mathf.Pow(3, (int) pathLengthEstimated);
 
 
                     //Debug.Log("Log of Total number of nodes:" + (Mathf.Log(AstarPath.active.data.gridGraph.Depth * AstarPath.active.data.gridGraph.Width)).ToString());
                     //Debug.Log("Complexity of A* : " + (Mathf.Log(simulator.agentPositions.Count) + 3 * Mathf.Log(pathLengthEstimated)).ToString());
-                  
-                    if(Mathf.Log(simulator.agentPositions.Count) + 3 * Mathf.Log(pathLengthEstimated) > Mathf.Log(AstarPath.active.data.gridGraph.Depth * AstarPath.active.data.gridGraph.Width))
+
+                    if (Mathf.Log(simulator.agentPositions.Count) + 3 * Mathf.Log(pathLengthEstimated) >
+                        Mathf.Log(AstarPath.active.data.gridGraph.Depth * AstarPath.active.data.gridGraph.Width))
                     {
                         Debug.Log("A* is not efficient due to long path or large number of agents...");
                         //update the pathnodes based on potential field method.
@@ -108,33 +128,37 @@ public class RVO_Agent : MonoBehaviour {
                         int[,] potentialmap = new int[gridgraph.Depth, gridgraph.Width];
 
                         //generate potential map
-                        potentialmap = GameObject.Find("PotentialMap").GetComponent<PotentialMapSet>().GetPotentialMap(target, gridgraph);
+                        potentialmap = GameObject.Find("PotentialMap").GetComponent<PotentialMapSet>()
+                            .GetPotentialMap(target, gridgraph);
 
                         //check the potentialmap
                         //Debug.Log("potential map is obtained. Above origin, the potential is like : " + potentialmap[48, 49].ToString());
                         //Debug.Log("potential Map is obtained. Below origin, the potential is like : " + potentialmap[51, 49].ToString());
 
-                        int[,] padded_potentialmap = GameObject.Find("PotentialMap").GetComponent<PotentialMapSet>().PadMap(potentialmap);
+                        int[,] padded_potentialmap = GameObject.Find("PotentialMap").GetComponent<PotentialMapSet>()
+                            .PadMap(potentialmap);
 
                         // visualize the potential map real-time(TODO)
 
 
                         // generate the field map by doing the gradient of padded potential map
-                        UnityEngine.Vector2[,] fieldmap = GameObject.Find("PotentialMap").GetComponent<PotentialMapSet>().GetFieldMap(padded_potentialmap);
+                        UnityEngine.Vector2[,] fieldmap = GameObject.Find("PotentialMap")
+                            .GetComponent<PotentialMapSet>().GetFieldMap(padded_potentialmap);
 
                         //Debug.Log("FieldMap is obtained. Above origin, the vector is like : " + fieldmap[49, 49].ToString());
                         //Debug.Log("FieldMap is obtained. Below origin, the vector is like : " + fieldmap[50, 49].ToString());
 
-                        pathNodes = GameObject.Find("PotentialMap").GetComponent<PotentialMapSet>().GetPathFromFieldMap(transform.position, new Vector3(target.x, transform.position.y, target.z), fieldmap);
+                        pathNodes = GameObject.Find("PotentialMap").GetComponent<PotentialMapSet>()
+                            .GetPathFromFieldMap(transform.position,
+                                new Vector3(target.x, transform.position.y, target.z), fieldmap);
                         currentNodeIndex = 0;
-
                     }
                     else
                     {
-                        seeker.StartPath(transform.position, new Vector3(target.x, transform.position.y, target.z), OnPathComplete);
+                        seeker.StartPath(transform.position, new Vector3(target.x, transform.position.y, target.z),
+                            OnPathComplete);
                         //Debug.Log("new path AFTER update has waypoint list length: " + path.vectorPath.Count.ToString()); 
                     }
-
                 }
             }
 
@@ -142,13 +166,14 @@ public class RVO_Agent : MonoBehaviour {
             {
                 Debug.Log("No available path found!");
                 return;
-
             }
+
             if (currentNodeIndex >= (pathNodes.Count - 1))
             {
                 //Debug.Log("Path Finding ended!");
                 return;
             }
+
             if (agentIndex != -1)
             {
                 RVO.Vector2 agent_update = simulator.getAgentPosition(agentIndex);
@@ -161,8 +186,14 @@ public class RVO_Agent : MonoBehaviour {
 
                 //characterController.SimpleMove(velocity);
             }
-        }	
-	}
+        }
+    }
+
+    public bool CheckIsArrived()
+    {
+        return true;
+    }
+
 
     //obtain the next Path node point 
     public RVO.Vector2 nextPathNode()
@@ -173,9 +204,9 @@ public class RVO_Agent : MonoBehaviour {
             // if the pathNodes is empty, return current position
             node_pos = transform.position;
             return new RVO.Vector2(node_pos.x, node_pos.z);
-
         }
-        if(currentNodeIndex < pathNodes.Count)
+
+        if (currentNodeIndex < pathNodes.Count)
         {
             node_pos = pathNodes[currentNodeIndex];
             float distance = Vector3.Distance(node_pos, transform.position);
@@ -186,34 +217,36 @@ public class RVO_Agent : MonoBehaviour {
                 node_pos = pathNodes[currentNodeIndex];
             }
         }
-        else{
+        else
+        {
             // last node of the A* path
             node_pos = pathNodes[pathNodes.Count - 1];
         }
+
         return new RVO.Vector2(node_pos.x, node_pos.z);
     }
 
     void CheckPushAway()
     {
-        foreach(var agent in GameObject.FindGameObjectWithTag("RVO_sim").GetComponent<RVO_Simulator>().rvoGameObjs)
+        foreach (var agent in GameObject.FindGameObjectWithTag("RVO_sim").GetComponent<RVO_Simulator>().rvoGameObjs)
         {
             float agentDist = Vector3.Distance(agent.transform.position, transform.position);
-            if (agentDist > 0 &&  agentDist < (characterController.radius + agent.GetComponent < CharacterController>().radius) * 1.25f)
+            if (agentDist > 0 && agentDist <
+                (characterController.radius + agent.GetComponent<CharacterController>().radius) * 1.25f)
             {
                 Vector3 dirMove = (transform.position - agent.transform.position).normalized;
                 if (AstarPath.active.GetNearest(transform.position + dirMove * Time.deltaTime).node.Walkable == true)
                 {
                     transform.Translate(dirMove * Time.deltaTime);
                 }
-                    
             }
         }
 
         // the tranform need update in the agentPositionlist
         if (agentIndex != -1)
         {
-           GameObject.FindGameObjectWithTag("RVO_sim").GetComponent<RVO_Simulator>().agentPositions[agentIndex] = new RVO.Vector2(transform.position.x, transform.position.z);
+            GameObject.FindGameObjectWithTag("RVO_sim").GetComponent<RVO_Simulator>().agentPositions[agentIndex] =
+                new RVO.Vector2(transform.position.x, transform.position.z);
         }
-
     }
 }

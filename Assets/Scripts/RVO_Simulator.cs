@@ -83,7 +83,13 @@ public class RVO_Simulator : MonoBehaviour {
                 for (int i = 0; i < agentNum; i++)
                 {
                     RVO.Vector2 agentPos = Simulator.Instance.getAgentPosition(i);
-                    RVO.Vector2 goalVector = rvoGameObjs[i].GetComponent<RVO_Agent>().nextPathNode() - agentPos;
+                    var _agent = rvoGameObjs[i].GetComponent<RVO_Agent>();
+                    if (_agent.IsArrived)
+                    {
+                        continue;
+                    }
+                    
+                    RVO.Vector2 goalVector = _agent.nextPathNode() - agentPos;
 
                     if (RVOMath.absSq(goalVector) > thresholdToMove)
                     {
